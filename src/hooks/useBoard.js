@@ -1,7 +1,7 @@
 // src/hooks/useBoard.js
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../api/supabase';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "../api/supabase";
+import { useAuth } from "../context/AuthContext";
 
 export const useBoard = () => {
   const { user } = useAuth();
@@ -17,9 +17,9 @@ export const useBoard = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: true });
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
 
@@ -28,7 +28,7 @@ export const useBoard = () => {
         setCurrentProject(data[0]);
       }
     } catch (err) {
-      console.error('Error fetching projects:', err.message);
+      console.error("Error fetching projects:", err.message);
     } finally {
       setLoading(false);
     }
@@ -41,15 +41,15 @@ export const useBoard = () => {
     try {
       const [colsRes, tasksRes] = await Promise.all([
         supabase
-          .from('columns')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('order_index', { ascending: true }),
+          .from("columns")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("order_index", { ascending: true }),
         supabase
-          .from('tasks')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('order_index', { ascending: true }),
+          .from("tasks")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("order_index", { ascending: true }),
       ]);
 
       if (colsRes.error) throw colsRes.error;
@@ -58,7 +58,7 @@ export const useBoard = () => {
       setColumns(colsRes.data || []);
       setTasks(tasksRes.data || []);
     } catch (err) {
-      console.error('Error fetching board:', err.message);
+      console.error("Error fetching board:", err.message);
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export const useBoard = () => {
     if (!user) return;
     try {
       const { data: newProj, error: projError } = await supabase
-        .from('projects')
+        .from("projects")
         .insert([{ title, user_id: user.id }])
         .select()
         .single();
@@ -92,24 +92,24 @@ export const useBoard = () => {
       if (projError) throw projError;
 
       // Daftarkan pembuat ke tabel project_members
-      await supabase.from('project_members').insert([
-        { project_id: newProj.id, user_id: user.id, role: 'owner' },
-      ]);
+      await supabase
+        .from("project_members")
+        .insert([{ project_id: newProj.id, user_id: user.id, role: "owner" }]);
 
       // Buat 3 kolom default
       const defaultCols = [
-        { project_id: newProj.id, title: 'To Do', order_index: 1 },
-        { project_id: newProj.id, title: 'In Progress', order_index: 2 },
-        { project_id: newProj.id, title: 'Done', order_index: 3 },
+        { project_id: newProj.id, title: "To Do", order_index: 1 },
+        { project_id: newProj.id, title: "In Progress", order_index: 2 },
+        { project_id: newProj.id, title: "Done", order_index: 3 },
       ];
-      await supabase.from('columns').insert(defaultCols);
+      await supabase.from("columns").insert(defaultCols);
 
       // Update state lokal dan set project aktif
       setProjects((prev) => [...prev, newProj]);
       setCurrentProject(newProj);
       return newProj;
     } catch (err) {
-      console.error('Error creating project:', err.message);
+      console.error("Error creating project:", err.message);
       throw err;
     }
   };
@@ -122,8 +122,8 @@ export const useBoard = () => {
 
       // Panggil RPC Supabase
       const { data: targetProj, error: rpcError } = await supabase.rpc(
-        'join_project_by_code',
-        { p_code: cleanCode }
+        "join_project_by_code",
+        { p_code: cleanCode },
       );
 
       if (rpcError) {
@@ -139,7 +139,7 @@ export const useBoard = () => {
 
       return targetProj;
     } catch (err) {
-      console.error('Error joining project:', err.message);
+      console.error("Error joining project:", err.message);
       throw err;
     }
   };
@@ -149,10 +149,10 @@ export const useBoard = () => {
     if (!user || !projectId) return;
     try {
       const { error } = await supabase
-        .from('project_members')
+        .from("project_members")
         .delete()
-        .eq('project_id', projectId)
-        .eq('user_id', user.id);
+        .eq("project_id", projectId)
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -160,7 +160,7 @@ export const useBoard = () => {
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       setCurrentProject((prev) => (prev?.id === projectId ? null : prev));
     } catch (err) {
-      console.error('Error leaving project:', err.message);
+      console.error("Error leaving project:", err.message);
       throw err;
     }
   };
@@ -170,10 +170,10 @@ export const useBoard = () => {
     if (!user || !projectId) return;
     try {
       const { error } = await supabase
-        .from('projects')
+        .from("projects")
         .delete()
-        .eq('id', projectId)
-        .eq('user_id', user.id);
+        .eq("id", projectId)
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -181,7 +181,7 @@ export const useBoard = () => {
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       setCurrentProject((prev) => (prev?.id === projectId ? null : prev));
     } catch (err) {
-      console.error('Error deleting project:', err.message);
+      console.error("Error deleting project:", err.message);
       throw err;
     }
   };
@@ -190,33 +190,42 @@ export const useBoard = () => {
   const moveTask = async (taskId, targetColumnId) => {
     // Optimistic UI: langsung ubah kolom task di state lokal
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, column_id: targetColumnId } : t))
+      prev.map((t) =>
+        t.id === taskId ? { ...t, column_id: targetColumnId } : t,
+      ),
     );
 
     try {
       const { error } = await supabase
-        .from('tasks')
+        .from("tasks")
         .update({ column_id: targetColumnId })
-        .eq('id', taskId);
+        .eq("id", taskId);
 
       if (error) throw error;
     } catch (err) {
-      console.error('Error moving task:', err.message);
+      console.error("Error moving task:", err.message);
       if (currentProject) fetchBoard(currentProject.id);
     }
   };
 
   // 8. Tambah Task Baru
-  const addTask = async (columnId, title, priority = 'Medium') => {
+  // 8. Tambah Task Baru dengan Judul & Deskripsi
+  const addTask = async (
+    columnId,
+    title,
+    description = "",
+    priority = "Medium",
+  ) => {
     if (!currentProject) return;
     try {
       const { data, error } = await supabase
-        .from('tasks')
+        .from("tasks")
         .insert([
           {
             project_id: currentProject.id,
             column_id: columnId,
-            title,
+            title: title.trim(),
+            description: description.trim(),
             priority,
             order_index: tasks.filter((t) => t.column_id === columnId).length,
           },
@@ -229,7 +238,7 @@ export const useBoard = () => {
         setTasks((prev) => [...prev, data]);
       }
     } catch (err) {
-      console.error('Error adding task:', err.message);
+      console.error("Error adding task:", err.message);
       throw err;
     }
   };
@@ -240,10 +249,10 @@ export const useBoard = () => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
 
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
       if (error) throw error;
     } catch (err) {
-      console.error('Error deleting task:', err.message);
+      console.error("Error deleting task:", err.message);
       setTasks(previousTasks); // Rollback jika query gagal
       throw err;
     }
