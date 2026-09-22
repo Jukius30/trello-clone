@@ -1,21 +1,45 @@
+// src/components/Footer.jsx
 export default function Footer({ totalTasks = 0, currentProjectTitle = '' }) {
   return (
-    <footer className="bg-dark text-secondary border-top border-secondary py-2 px-3 small d-flex justify-content-between align-items-center">
-      <div className="d-flex align-items-center gap-3">
-        <span>
-          <i className="bi bi-folder2-open text-primary me-1"></i>
-          Project: <strong className="text-light">{currentProjectTitle || '-'}</strong>
-        </span>
-        <span className="d-none d-sm-inline">•</span>
-        <span className="d-none d-sm-inline">
-          <i className="bi bi-check2-circle text-success me-1"></i>
-          Total Task: <strong className="text-light">{totalTasks}</strong>
-        </span>
-      </div>
+    <footer className="app-navbar border-top border-secondary border-opacity-15 px-3 py-2 mt-auto">
+      <div className="container-fluid d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 px-1">
+        {/* Kiri: Status Proyek & Task Counter */}
+        <div className="d-flex align-items-center gap-3">
+          {currentProjectTitle && (
+            <div className="d-flex align-items-center gap-1.5 text-secondary small">
+              <i className="bi bi-folder2-open text-primary opacity-75"></i>
+              <span className="text-light fw-medium">{currentProjectTitle}</span>
+            </div>
+          )}
 
-      <div className="d-flex align-items-center gap-1">
-        <i className="bi bi-shield-check text-info"></i>
-        <span style={{ fontSize: '11px' }}>RLS Secured • Supabase</span>
+          <div className="d-flex align-items-center gap-1.5 text-secondary small border-start border-secondary border-opacity-25 ps-3">
+            <span className="text-secondary">Total:</span>
+            <span className="badge bg-secondary bg-opacity-25 text-light rounded-pill px-2 py-0.5 font-monospace">
+              {totalTasks} {totalTasks === 1 ? 'task' : 'tasks'}
+            </span>
+          </div>
+        </div>
+
+        {/* Kanan: System Status Indicator & Copyright */}
+        <div className="d-flex align-items-center gap-3 text-secondary small">
+          <div className="d-flex align-items-center gap-1.5" title="Supabase Realtime Sync Active">
+            <span
+              className="rounded-circle bg-success shadow-sm"
+              style={{
+                width: '6px',
+                height: '6px',
+                boxShadow: '0 0 8px rgba(34, 197, 94, 0.6)',
+              }}
+            ></span>
+            <span className="font-monospace" style={{ fontSize: '11px', color: '#94a3b8' }}>
+              Synced
+            </span>
+          </div>
+
+          <span className="border-start border-secondary border-opacity-25 ps-3 opacity-60" style={{ fontSize: '11px' }}>
+            &copy; {new Date().getFullYear()} TrelloClone
+          </span>
+        </div>
       </div>
     </footer>
   );

@@ -1,4 +1,20 @@
 /* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-main: #090a0f;
+  --bg-surface: #11131a;
+  --bg-card: #181b24;
+  --bg-card-hover: #1e222e;
+  --border-subtle: #242938;
+  --border-focus: #3b82f6;
+  --text-muted: #8b949e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #root {
@@ -6,28 +22,96 @@ body,
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #000; /* Selaras dengan tema gelap */
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-main);
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Kustomisasi scrollbar gelap agar selaras dengan tema Bootstrap Dark */
+/* Custom Minimal Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e2125;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #495057;
-  border-radius: 3px;
+  background: #2a3042;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6c757d;
+  background: #404963;
+}
+
+/* Glassmorphism Navbar */
+.app-navbar {
+  background-color: rgba(17, 19, 26, 0.85) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+/* Kolom Kanban Container */
+.kanban-column-card {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.kanban-column-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+/* Kartu Task Modern */
+.kanban-task-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.kanban-task-card:hover {
+  transform: translateY(-2px);
+  background-color: var(--bg-card-hover);
+  border-color: #3b445c;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.kanban-task-card:active {
+  cursor: grabbing !important;
+  transform: scale(0.98);
+}
+
+.task-desc {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Input Form Sederhana & Bersih */
+.modern-input {
+  background-color: #0d0f14 !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: #f8fafc !important;
+  border-radius: 8px !important;
+}
+
+.modern-input:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.modern-input::placeholder {
+  color: #4b5563 !important;
 }
 
 .text-hover-danger:hover {
-  color: #dc3545 !important;
+  color: #ef4444 !important;
 }

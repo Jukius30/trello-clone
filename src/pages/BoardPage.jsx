@@ -33,41 +33,32 @@ export default function BoardPage() {
   const [joinProjectId, setJoinProjectId] = useState('');
   const [joinError, setJoinError] = useState('');
 
-  // Form State untuk Task Baru
+  // Form Task Baru
   const [activeColumnInput, setActiveColumnInput] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState('Medium');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sinkronkan board aktif berdasarkan projectId dari URL
   useEffect(() => {
     if (projectId && projects.length > 0) {
       const match = projects.find((p) => p.id === projectId);
-      if (match) {
-        setCurrentProject(match);
-      }
+      if (match) setCurrentProject(match);
     }
   }, [projectId, projects, setCurrentProject]);
 
-  // Drag and Drop Handler
   const handleDragStart = (e, taskId) => {
     e.dataTransfer.setData('text/plain', taskId);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragOver = (e) => e.preventDefault();
 
   const handleDrop = (e, targetColumnId) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('text/plain');
-    if (taskId) {
-      moveTask(taskId, targetColumnId);
-    }
+    if (taskId) moveTask(taskId, targetColumnId);
   };
 
-  // Buat Project Baru
   const handleCreateProject = async (e) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -77,7 +68,6 @@ export default function BoardPage() {
     if (newProj) navigate(`/board/${newProj.id}`);
   };
 
-  // Join Project
   const handleJoinProject = async (e) => {
     e.preventDefault();
     setJoinError('');
@@ -93,7 +83,6 @@ export default function BoardPage() {
     }
   };
 
-  // Reset form tambah task
   const resetTaskForm = () => {
     setActiveColumnInput(null);
     setNewTaskTitle('');
@@ -101,25 +90,50 @@ export default function BoardPage() {
     setNewTaskPriority('Medium');
   };
 
-  // Buat Task Baru
   const handleCreateTask = async (columnId) => {
     if (!newTaskTitle.trim()) return;
     await addTask(columnId, newTaskTitle, newTaskDescription, newTaskPriority);
     resetTaskForm();
   };
 
-  // Filter Task (Pencarian lewat Judul atau Deskripsi)
   const filteredTasks = tasks.filter((t) => {
     const q = searchQuery.toLowerCase();
-    const matchTitle = t.title?.toLowerCase().includes(q);
-    const matchDesc = t.description?.toLowerCase().includes(q);
-    return matchTitle || matchDesc;
+    return (
+      t.title?.toLowerCase().includes(q) ||
+      t.description?.toLowerCase().includes(q)
+    );
   });
 
-  const getPriorityBadge = (priority) => {
-    if (priority === 'High') return 'bg-danger text-white';
-    if (priority === 'Medium') return 'bg-warning text-dark';
-    return 'bg-success text-white';
+  // Soft Badge & Border Accent Modern
+  const getPriorityStyle = (priority) => {
+    switch (priority) {
+      case 'High':
+        return {
+          badge: 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25',
+          borderLeft: '#f43f5e',
+          dot: '#f43f5e',
+        };
+      case 'Medium':
+        return {
+          badge: 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25',
+          borderLeft: '#f59e0b',
+          dot: '#f59e0b',
+        };
+      default:
+        return {
+          badge: 'bg-success bg-opacity-10 text-success border border-success border-opacity-25',
+          borderLeft: '#10b981',
+          dot: '#10b981',
+        };
+    }
+  };
+
+  // Header Icon untuk tiap Kolom
+  const getColumnIcon = (title) => {
+    const t = title.toLowerCase();
+    if (t.includes('progress')) return 'bi bi-lightning-charge text-warning';
+    if (t.includes('done')) return 'bi bi-check-circle text-success';
+    return 'bi bi-circle text-secondary';
   };
 
   return (
@@ -143,30 +157,30 @@ export default function BoardPage() {
       />
 
       {/* Konten Utama Kanban Board */}
-      <main className="flex-grow-1 p-3 bg-dark bg-opacity-75 overflow-hidden">
+      <main className="flex-grow-1 p-3 overflow-hidden" style={{ backgroundColor: '#090a0f' }}>
         {loading ? (
-          <div className="h-100 d-flex align-items-center justify-content-center text-secondary">
-            <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
-            <span>Memuat data board...</span>
+          <div className="h-100 d-flex flex-column align-items-center justify-content-center text-secondary gap-2">
+            <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span className="small">Memuat data board...</span>
           </div>
         ) : !currentProject ? (
           <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center">
-            <div className="card bg-dark border-secondary p-4 shadow" style={{ maxWidth: '380px' }}>
-              <h5 className="card-title text-white">Belum Ada Project Terpilih</h5>
-              <p className="card-text text-secondary small">
-                Silakan pilih board dari dashboard atau buat project baru.
+            <div className="kanban-column-card p-4 shadow text-center" style={{ maxWidth: '380px' }}>
+              <i className="bi bi-kanban fs-1 text-primary opacity-75 mb-2 d-block"></i>
+              <h6 className="fw-bold text-white mb-1">Pilih Workspace</h6>
+              <p className="text-secondary small mb-3">
+                Silakan pilih board yang ingin dikerjakan dari dashboard utama.
               </p>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard')}
-                className="btn btn-primary btn-sm mx-auto"
+                className="btn btn-primary btn-sm px-3 py-1.5"
               >
-                Ke Semua Board
+                Lihat Semua Board
               </button>
             </div>
           </div>
         ) : (
-          /* Container Bootstrap Row yang membagi rata 3 kolom */
           <div className="row h-100 g-3 align-items-stretch m-0">
             {columns.map((col) => {
               const colTasks = filteredTasks.filter((t) => t.column_id === col.id);
@@ -176,131 +190,150 @@ export default function BoardPage() {
                   <div
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, col.id)}
-                    className="card bg-dark border-secondary shadow-sm d-flex flex-column h-100 w-100"
+                    className="card kanban-column-card d-flex flex-column h-100 w-100"
                   >
                     {/* Header Kolom */}
-                    <div className="card-header bg-dark border-secondary d-flex justify-content-between align-items-center py-2 px-3">
-                      <span className="fw-semibold text-light small">{col.title}</span>
-                      <span className="badge bg-secondary rounded-pill">{colTasks.length}</span>
+                    <div className="card-header kanban-column-header d-flex justify-content-between align-items-center py-2.5 px-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className={getColumnIcon(col.title)}></i>
+                        <span className="fw-semibold text-light small tracking-wide">
+                          {col.title}
+                        </span>
+                      </div>
+                      <span
+                        className="badge bg-secondary bg-opacity-25 text-light rounded-pill px-2 py-1"
+                        style={{ fontSize: '11px' }}
+                      >
+                        {colTasks.length}
+                      </span>
                     </div>
 
                     {/* Task List */}
                     <div
-                      className="card-body overflow-auto p-2 d-flex flex-column gap-2 flex-grow-1"
+                      className="card-body overflow-auto p-2.5 d-flex flex-column gap-2 flex-grow-1"
                       style={{ minHeight: 0 }}
                     >
                       {colTasks.length === 0 ? (
-                        <div className="h-100 d-flex align-items-center justify-content-center text-secondary small fst-italic">
-                          Tarik task ke sini
+                        <div className="h-100 d-flex flex-column align-items-center justify-content-center text-secondary opacity-50 small fst-italic">
+                          <i className="bi bi-plus-circle-dotted fs-4 mb-1"></i>
+                          <span>Belum ada task</span>
                         </div>
                       ) : (
-                        colTasks.map((task) => (
-                          <div
-                            key={task.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, task.id)}
-                            className="card bg-black border-secondary p-2.5 shadow-sm text-start"
-                            style={{ cursor: 'grab' }}
-                          >
-                            <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
-                              {/* Judul Task */}
-                              <h6 className="card-title text-light fw-semibold small mb-0 pe-2">
-                                {task.title}
-                              </h6>
-                              <div className="d-flex align-items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteTask(task.id);
-                                  }}
-                                  className="btn btn-link text-secondary text-hover-danger p-0 border-0"
-                                  title="Hapus Task"
-                                  style={{ fontSize: '13px', lineHeight: 1 }}
+                        colTasks.map((task) => {
+                          const priorityStyle = getPriorityStyle(task.priority);
+
+                          return (
+                            <div
+                              key={task.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, task.id)}
+                              className="kanban-task-card p-3 text-start position-relative"
+                              style={{
+                                cursor: 'grab',
+                                borderLeft: `3px solid ${priorityStyle.borderLeft}`,
+                              }}
+                            >
+                              {/* Header Task */}
+                              <div className="d-flex justify-content-between align-items-start gap-2 mb-1.5">
+                                <span className="fw-semibold text-white small lh-sm pe-1">
+                                  {task.title}
+                                </span>
+                                <div className="d-flex align-items-center gap-1 opacity-75">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
+                                    className="btn btn-link text-secondary p-0 border-0 text-hover-danger"
+                                    title="Hapus Task"
+                                    style={{ fontSize: '12px', lineHeight: 1 }}
+                                  >
+                                    <i className="bi bi-trash3"></i>
+                                  </button>
+                                  <i className="bi bi-grip-vertical text-secondary ms-1 opacity-50"></i>
+                                </div>
+                              </div>
+
+                              {/* Deskripsi Task */}
+                              {task.description && (
+                                <p
+                                  className="task-desc mb-2.5"
+                                  style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
                                 >
-                                  <i className="bi bi-trash3"></i>
-                                </button>
-                                <i className="bi bi-grip-vertical text-secondary ms-1"></i>
+                                  {task.description}
+                                </p>
+                              )}
+
+                              {/* Footer Task */}
+                              <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-10 mt-1">
+                                <span
+                                  className={`badge rounded-pill fw-medium d-inline-flex align-items-center gap-1.5 py-1 px-2 ${priorityStyle.badge}`}
+                                  style={{ fontSize: '10px' }}
+                                >
+                                  <span
+                                    className="rounded-circle"
+                                    style={{
+                                      width: '5px',
+                                      height: '5px',
+                                      backgroundColor: priorityStyle.dot,
+                                    }}
+                                  ></span>
+                                  {task.priority}
+                                </span>
+
+                                <i className="bi bi-card-text text-secondary opacity-40 small"></i>
                               </div>
                             </div>
-
-                            {/* Deskripsi Task (jika ada) */}
-                            {task.description && (
-                              <p
-                                className="card-text text-secondary small mb-2"
-                                style={{
-                                  fontSize: '12px',
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word',
-                                }}
-                              >
-                                {task.description}
-                              </p>
-                            )}
-
-                            <div>
-                              <span
-                                className={`badge ${getPriorityBadge(task.priority)}`}
-                                style={{ fontSize: '10px' }}
-                              >
-                                {task.priority}
-                              </span>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
 
-                    {/* Footer Kolom: Form Input Judul, Deskripsi & Prioritas */}
-                    <div className="card-footer bg-dark border-secondary p-2 mt-auto">
+                    {/* Footer Kolom: Form Input Task */}
+                    <div className="card-footer bg-transparent border-top border-secondary border-opacity-15 p-2 mt-auto">
                       {activeColumnInput === col.id ? (
-                        <div className="d-flex flex-column gap-2">
-                          {/* Input Judul Task */}
+                        <div className="d-flex flex-column gap-2 p-1">
                           <input
                             type="text"
                             placeholder="Judul task..."
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
-                            className="form-control form-control-sm bg-black border-secondary text-white"
+                            className="form-control form-control-sm modern-input py-1.5 px-2.5 small"
                             autoFocus
                           />
-
-                          {/* Input Deskripsi Task */}
                           <textarea
                             placeholder="Deskripsi task (opsional)..."
                             value={newTaskDescription}
                             onChange={(e) => setNewTaskDescription(e.target.value)}
-                            className="form-control form-control-sm bg-black border-secondary text-white"
+                            className="form-control form-control-sm modern-input py-1.5 px-2.5 small"
                             rows="2"
                           />
-
-                          {/* Prioritas dan Tombol Aksi */}
                           <div className="d-flex justify-content-between align-items-center mt-1">
                             <select
                               value={newTaskPriority}
                               onChange={(e) => setNewTaskPriority(e.target.value)}
-                              className="form-select form-select-sm bg-black border-secondary text-white py-0 px-2"
-                              style={{ width: '95px', height: '28px', fontSize: '12px' }}
+                              className="form-select form-select-sm modern-input py-1 px-2"
+                              style={{ width: '95px', height: '28px', fontSize: '11px' }}
                             >
                               <option value="Low">Low</option>
                               <option value="Medium">Medium</option>
                               <option value="High">High</option>
                             </select>
-
-                            <div className="d-flex gap-1">
+                            <div className="d-flex gap-1.5">
                               <button
                                 type="button"
                                 onClick={resetTaskForm}
-                                className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                style={{ height: '28px' }}
+                                className="btn btn-outline-secondary modern-input btn-sm py-0.5 px-2 text-secondary"
+                                style={{ height: '28px', fontSize: '12px' }}
                               >
                                 Batal
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleCreateTask(col.id)}
-                                className="btn btn-primary btn-sm py-0 px-2"
-                                style={{ height: '28px' }}
+                                className="btn btn-primary btn-sm py-0.5 px-2.5 fw-medium"
+                                style={{ height: '28px', fontSize: '12px' }}
                               >
                                 Tambah
                               </button>
@@ -314,9 +347,10 @@ export default function BoardPage() {
                             resetTaskForm();
                             setActiveColumnInput(col.id);
                           }}
-                          className="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1"
+                          className="btn btn-sm btn-outline-secondary modern-input w-100 d-flex align-items-center justify-content-center gap-1.5 py-1.5 opacity-75 hover-opacity-100"
                         >
-                          <i className="bi bi-plus-lg"></i> Tambah Task
+                          <i className="bi bi-plus-lg small"></i>
+                          <span className="small fw-medium">Tambah Task</span>
                         </button>
                       )}
                     </div>
@@ -335,9 +369,9 @@ export default function BoardPage() {
       {showProjectModal && (
         <div className="modal d-block bg-black bg-opacity-75" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered modal-sm">
-            <div className="modal-content bg-dark border-secondary text-light">
-              <div className="modal-header border-secondary py-2">
-                <h6 className="modal-title">Project Baru</h6>
+            <div className="modal-content kanban-column-card text-light">
+              <div className="modal-header border-secondary border-opacity-25 py-2 px-3">
+                <h6 className="modal-title small fw-bold">Project Baru</h6>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -345,26 +379,26 @@ export default function BoardPage() {
                 ></button>
               </div>
               <form onSubmit={handleCreateProject}>
-                <div className="modal-body">
-                  <label className="form-label small text-secondary">Nama Project</label>
+                <div className="modal-body px-3 py-2.5">
+                  <label className="form-label small text-secondary mb-1">Nama Project</label>
                   <input
                     type="text"
-                    placeholder="Contoh: Mobile App"
+                    placeholder="Contoh: Mobile App, Web Store"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
-                    className="form-control form-control-sm bg-black border-secondary text-white"
+                    className="form-control form-control-sm modern-input py-1.5 px-2.5"
                     autoFocus
                   />
                 </div>
-                <div className="modal-footer border-secondary py-2">
+                <div className="modal-footer border-secondary border-opacity-25 py-2 px-3">
                   <button
                     type="button"
                     onClick={() => setShowProjectModal(false)}
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-outline-secondary modern-input btn-sm py-1 px-2.5"
                   >
                     Batal
                   </button>
-                  <button type="submit" className="btn btn-primary btn-sm">
+                  <button type="submit" className="btn btn-primary btn-sm py-1 px-3">
                     Simpan
                   </button>
                 </div>
@@ -378,9 +412,9 @@ export default function BoardPage() {
       {showJoinModal && (
         <div className="modal d-block bg-black bg-opacity-75" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered modal-sm">
-            <div className="modal-content bg-dark border-secondary text-light">
-              <div className="modal-header border-secondary py-2">
-                <h6 className="modal-title">Gabung ke Project</h6>
+            <div className="modal-content kanban-column-card text-light">
+              <div className="modal-header border-secondary border-opacity-25 py-2 px-3">
+                <h6 className="modal-title small fw-bold">Gabung Workspace</h6>
                 <button
                   type="button"
                   className="btn-close btn-close-white"
@@ -391,33 +425,33 @@ export default function BoardPage() {
                 ></button>
               </div>
               <form onSubmit={handleJoinProject}>
-                <div className="modal-body">
+                <div className="modal-body px-3 py-2.5">
                   {joinError && (
                     <div className="alert alert-danger py-1 px-2 small mb-2">{joinError}</div>
                   )}
-                  <label className="form-label small text-secondary">Kode Project (6 Karakter)</label>
+                  <label className="form-label small text-secondary mb-1">Kode Undangan (6 Karakter)</label>
                   <input
                     type="text"
                     placeholder="Contoh: 7K9M2X"
                     value={joinProjectId}
                     onChange={(e) => setJoinProjectId(e.target.value.toUpperCase())}
                     maxLength={6}
-                    className="form-control form-control-sm bg-black border-secondary text-white font-monospace text-center fs-6 tracking-wider"
+                    className="form-control form-control-sm modern-input font-monospace text-center py-1.5 fs-6 tracking-wider"
                     autoFocus
                   />
                 </div>
-                <div className="modal-footer border-secondary py-2">
+                <div className="modal-footer border-secondary border-opacity-25 py-2 px-3">
                   <button
                     type="button"
                     onClick={() => {
                       setShowJoinModal(false);
                       setJoinError('');
                     }}
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-outline-secondary modern-input btn-sm py-1 px-2.5"
                   >
                     Batal
                   </button>
-                  <button type="submit" className="btn btn-info btn-sm text-dark fw-semibold">
+                  <button type="submit" className="btn btn-primary btn-sm py-1 px-3">
                     Gabung
                   </button>
                 </div>

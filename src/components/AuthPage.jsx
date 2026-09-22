@@ -1,122 +1,188 @@
 // src/components/AuthPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/AuthService';
-import { AuthController } from '../controllers/AuthController';
-
-const authController = new AuthController(authService);
+import { supabase } from '../api/supabase';
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const [isRegister, setIsRegister] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setErrorMessage('');
-  };
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     setErrorMessage('');
+    setSuccessMessage('');
+    setLoading(true);
 
     try {
-      if (isRegister) {
-        await authController.handleRegister(formData);
+      if (isLogin) {
+        // Mode Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+        navigate('/dashboard');
       } else {
-        await authController.handleLogin(formData);
+        // Mode Register
+        const { error, data } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data?.session) {
+          navigate('/dashboard');
+        } else {
+          setSuccessMessage(
+            'Registrasi berhasil! Cek email Anda untuk konfirmasi aktivasi akun, atau langsung coba login.'
+          );
+        }
       }
-      navigate('/dashboard', { replace: true });
-    } catch (error) {
-      setErrorMessage(error.message);
+    } catch (err) {
+      setErrorMessage(err.message || 'Terjadi kesalahan saat otentikasi.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-black p-3">
-      <div className="card bg-dark border-secondary shadow-lg text-light" style={{ width: '100%', maxWidth: '420px' }}>
-        <div className="card-body p-4">
-          {/* Header */}
-          <div className="text-center mb-4">
-            <div className="d-inline-flex p-3 rounded-circle bg-primary bg-opacity-10 text-primary mb-2">
-              <i className="bi bi-kanban-fill fs-3"></i>
-            </div>
-            <h4 className="fw-bold text-white mb-1">
-              {isRegister ? 'Buat Akun Baru' : 'Selamat Datang'}
-            </h4>
-            <p className="text-secondary small mb-0">
-              {isRegister
-                ? 'Daftar untuk membuat dan mengelola project Anda'
-                : 'Masuk ke akun untuk mengakses board kerja Anda'}
-            </p>
+    <div
+      className="min-vh-100 d-flex align-items-center justify-content-center p-3 position-relative overflow-hidden"
+      style={{ backgroundColor: 'var(--bg-main, #090a0f)' }}
+    >
+      {/* Background Radial Glow Effect */}
+      <div
+        className="position-absolute top-50 start-50 translate-middle rounded-circle pointer-events-none"
+        style={{
+          width: '500px',
+          height: '500px',
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(9, 10, 15, 0) 70%)',
+          filter: 'blur(40px)',
+          zIndex: 0,
+        }}
+      ></div>
+
+      <div className="w-100 position-relative" style={{ maxWidth: '400px', zIndex: 1 }}>
+        {/* Logo & Headline */}
+        <div className="text-center mb-4">
+          <div
+            className="bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-3 d-inline-flex align-items-center justify-content-center mb-2.5 shadow-sm"
+            style={{ width: '44px', height: '44px' }}
+          >
+            <i className="bi bi-kanban-fill fs-5"></i>
+          </div>
+          <h4 className="fw-bold text-white mb-1 tracking-wide">
+            Trello<span className="text-primary">Clone</span>
+          </h4>
+          <p className="task-desc small mb-0">
+            {isLogin
+              ? 'Masuk ke akun untuk melanjutkan pekerjaan tim'
+              : 'Daftar akun baru dan kelola project Anda'}
+          </p>
+        </div>
+
+        {/* Card Form */}
+        <div className="kanban-column-card p-4 shadow-lg">
+          {/* Toggle Tab Login / Register */}
+          <div
+            className="d-flex p-1 rounded-2 mb-3.5"
+            style={{ backgroundColor: '#0d0f14', border: '1px solid var(--border-subtle, #242938)' }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(true);
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+              className={`btn btn-sm flex-grow-1 border-0 py-1.5 fw-medium rounded-2 transition-all ${
+                isLogin
+                  ? 'btn-primary text-white shadow-sm'
+                  : 'text-secondary bg-transparent'
+              }`}
+              style={{ fontSize: '13px' }}
+            >
+              Masuk
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(false);
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+              className={`btn btn-sm flex-grow-1 border-0 py-1.5 fw-medium rounded-2 transition-all ${
+                !isLogin
+                  ? 'btn-primary text-white shadow-sm'
+                  : 'text-secondary bg-transparent'
+              }`}
+              style={{ fontSize: '13px' }}
+            >
+              Daftar Baru
+            </button>
           </div>
 
-          {/* Notifikasi Error */}
+          {/* Alert Error / Success */}
           {errorMessage && (
-            <div className="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 small border-0 mb-3" role="alert">
-              <i className="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-              <div>{errorMessage}</div>
+            <div
+              className="alert bg-danger bg-opacity-10 border border-danger border-opacity-25 text-danger py-2 px-3 small rounded-2 mb-3 d-flex align-items-center gap-2"
+              role="alert"
+            >
+              <i className="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+              <div style={{ fontSize: '12px' }}>{errorMessage}</div>
+            </div>
+          )}
+
+          {successMessage && (
+            <div
+              className="alert bg-success bg-opacity-10 border border-success border-opacity-25 text-success py-2 px-3 small rounded-2 mb-3 d-flex align-items-center gap-2"
+              role="alert"
+            >
+              <i className="bi bi-check-circle-fill flex-shrink-0"></i>
+              <div style={{ fontSize: '12px' }}>{successMessage}</div>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="d-flex flex-column gap-3">
-            {isRegister && (
-              <div>
-                <label className="form-label text-secondary small mb-1">Nama Lengkap</label>
-                <div className="input-group input-group-sm">
-                  <span className="input-group-text bg-black border-secondary text-secondary">
-                    <i className="bi bi-person"></i>
-                  </span>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="John Doe"
-                    className="form-control bg-black border-secondary text-white shadow-none"
-                    required={isRegister}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="form-label text-secondary small mb-1">Email</label>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="form-label small text-secondary mb-1 fw-medium">Email</label>
               <div className="input-group input-group-sm">
-                <span className="input-group-text bg-black border-secondary text-secondary">
+                <span className="input-group-text modern-input border-end-0 text-secondary pe-2">
                   <i className="bi bi-envelope"></i>
                 </span>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
                   placeholder="nama@email.com"
-                  className="form-control bg-black border-secondary text-white shadow-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="form-control modern-input border-start-0 ps-1"
                   required
+                  autoFocus
                 />
               </div>
             </div>
 
-            <div>
-              <label className="form-label text-secondary small mb-1">Password</label>
+            <div className="mb-4">
+              <label className="form-label small text-secondary mb-1 fw-medium">Password</label>
               <div className="input-group input-group-sm">
-                <span className="input-group-text bg-black border-secondary text-secondary">
+                <span className="input-group-text modern-input border-end-0 text-secondary pe-2">
                   <i className="bi bi-lock"></i>
                 </span>
                 <input
                   type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
                   placeholder="Minimal 6 karakter"
-                  className="form-control bg-black border-secondary text-white shadow-none"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-control modern-input border-start-0 ps-1"
+                  minLength={6}
                   required
                 />
               </div>
@@ -124,43 +190,25 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-2 mt-2 py-2 fw-semibold"
+              disabled={loading}
+              className="btn btn-primary btn-sm w-100 py-2 rounded-2 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm"
             >
-              {isLoading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  <span>Memproses...</span>
-                </>
-              ) : isRegister ? (
-                <>
-                  <i className="bi bi-person-plus-fill"></i>
-                  <span>Daftar Akun</span>
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-box-arrow-in-right"></i>
-                  <span>Masuk</span>
-                </>
+              {loading && (
+                <div
+                  className="spinner-border spinner-border-sm text-white"
+                  role="status"
+                  style={{ width: '14px', height: '14px' }}
+                ></div>
               )}
+              <span>{isLogin ? 'Masuk ke Dashboard' : 'Buat Akun Sekarang'}</span>
             </button>
           </form>
-
-          {/* Switcher Mode Login / Register */}
-          <div className="text-center mt-4 small text-secondary">
-            {isRegister ? 'Sudah memiliki akun?' : 'Belum memiliki akun?'}{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setErrorMessage('');
-              }}
-              className="btn btn-link p-0 text-primary small text-decoration-none fw-semibold ms-1"
-            >
-              {isRegister ? 'Masuk sekarang' : 'Daftar sekarang'}
-            </button>
-          </div>
         </div>
+
+        {/* Footer Text */}
+        <p className="text-center text-secondary small mt-4 opacity-50" style={{ fontSize: '11px' }}>
+          TrelloClone &bull; Workspace Collaboration Platform
+        </p>
       </div>
     </div>
   );
