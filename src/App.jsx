@@ -1,28 +1,49 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PublicRoute from './routes/PublicRoute';
 import AuthPage from './components/AuthPage';
-import BoardPage from './pages/BoardPage'; // Komponen tampilan kanban board utama
+import ProjectsPage from './pages/ProjectsPage'; // <-- Ini komponen katalog board
+import BoardPage from './pages/BoardPage';
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rute Publik: Hanya bisa dibuka jika belum login */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<AuthPage />} />
-          </Route>
+          {/* Public Auth */}
+          <Route
+            path="/auth"
+            element={
+              <PublicRoute>
+                <AuthPage />
+              </PublicRoute>
+            }
+          />
 
-          {/* Rute Terproteksi: Wajib login untuk akses */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<BoardPage />} />
-            {/* Dukungan URL dinamis per project jika diperlukan: /project/:projectId */}
-            <Route path="/project/:projectId" element={<BoardPage />} />
-          </Route>
+          {/* Menampilkan daftar board milik user */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <ProjectsPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Fallback Redirect */}
+          {/* Menampilkan papan Kanban board yang dipilih */}
+          <Route
+            path="/board/:projectId"
+            element={
+              <ProtectedRoute>
+                <BoardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect rute awal */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

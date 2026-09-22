@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// src/hooks/useBoard.js
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../api/supabase';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,8 +12,9 @@ export const useBoard = () => {
   const [loading, setLoading] = useState(false);
 
   // 1. Ambil semua project milik user atau hasil join
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -21,19 +23,19 @@ export const useBoard = () => {
 
       if (error) throw error;
 
-      if (data) {
-        setProjects(data);
-        if (data.length > 0 && !currentProject) {
-          setCurrentProject(data[0]);
-        }
+      setProjects(data || []);
+      if (data && data.length > 0 && !currentProject) {
+        setCurrentProject(data[0]);
       }
     } catch (err) {
       console.error('Error fetching projects:', err.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user, currentProject]);
 
-  // 2. Ambil data board untuk project aktif
-  const fetchBoard = async (projectId) => {
+  // 2. Ambil data board untuk project aktif (kolom & task)
+  const fetchBoard = useCallback(async (projectId) => {
     if (!projectId) return;
     setLoading(true);
     try {
@@ -60,12 +62,14 @@ export const useBoard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Sinkronkan daftar project saat user login
   useEffect(() => {
     fetchProjects();
   }, [user]);
 
+  // Sinkronkan data board saat currentProject berubah
   useEffect(() => {
     if (currentProject) {
       fetchBoard(currentProject.id);
@@ -73,7 +77,7 @@ export const useBoard = () => {
       setColumns([]);
       setTasks([]);
     }
-  }, [currentProject]);
+  }, [currentProject, fetchBoard]);
 
   // 3. Tambah Project Baru + Daftarkan User sebagai Owner
   const createProject = async (title) => {
@@ -92,7 +96,7 @@ export const useBoard = () => {
         { project_id: newProj.id, user_id: user.id, role: 'owner' },
       ]);
 
-      // Buat kolom bawaan
+      // Buat 3 kolom default
       const defaultCols = [
         { project_id: newProj.id, title: 'To Do', order_index: 1 },
         { project_id: newProj.id, title: 'In Progress', order_index: 2 },
@@ -100,51 +104,91 @@ export const useBoard = () => {
       ];
       await supabase.from('columns').insert(defaultCols);
 
-      await fetchProjects();
+      // Update state lokal dan set project aktif
+      setProjects((prev) => [...prev, newProj]);
       setCurrentProject(newProj);
+      return newProj;
     } catch (err) {
       console.error('Error creating project:', err.message);
+      throw err;
     }
   };
 
-  // 4. Fitur User Lain Join Project via Project ID
+  // 4. Fitur User Lain Join Project via Kode Simpel (6 Karakter)
   const joinProject = async (projectCode) => {
     if (!user) return;
     try {
       const cleanCode = projectCode.trim().toUpperCase();
 
-      // Cari project berdasarkan kodenya
-      const { data: targetProj, error: findErr } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('code', cleanCode)
-        .single();
+      // Panggil RPC Supabase
+      const { data: targetProj, error: rpcError } = await supabase.rpc(
+        'join_project_by_code',
+        { p_code: cleanCode }
+      );
 
-      if (findErr || !targetProj) {
-        throw new Error('Kode project tidak valid atau tidak ditemukan.');
+      if (rpcError) {
+        throw new Error(rpcError.message);
       }
 
-      // Masukkan ke daftar anggota project_members menggunakan targetProj.id
-      const { error: memberError } = await supabase
-        .from('project_members')
-        .insert([{ project_id: targetProj.id, user_id: user.id, role: 'member' }]);
-
-      if (memberError) {
-        if (memberError.code === '23505') {
-          throw new Error('Anda sudah bergabung di project ini.');
-        }
-        throw new Error(memberError.message);
-      }
-
-      await fetchProjects();
+      // Perbarui state lokal
+      setProjects((prev) => {
+        const exists = prev.some((p) => p.id === targetProj.id);
+        return exists ? prev : [...prev, targetProj];
+      });
       setCurrentProject(targetProj);
+
+      return targetProj;
     } catch (err) {
+      console.error('Error joining project:', err.message);
       throw err;
     }
   };
 
-  // 5. Pindah Task (Drag & Drop)
+  // 5. Keluar dari Project (Member)
+  const leaveProject = async (projectId) => {
+    if (!user || !projectId) return;
+    try {
+      const { error } = await supabase
+        .from('project_members')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update state projects secara lokal seketika
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setCurrentProject((prev) => (prev?.id === projectId ? null : prev));
+    } catch (err) {
+      console.error('Error leaving project:', err.message);
+      throw err;
+    }
+  };
+
+  // 6. Hapus Project Permanen (Owner)
+  const deleteProject = async (projectId) => {
+    if (!user || !projectId) return;
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update state projects secara lokal seketika
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setCurrentProject((prev) => (prev?.id === projectId ? null : prev));
+    } catch (err) {
+      console.error('Error deleting project:', err.message);
+      throw err;
+    }
+  };
+
+  // 7. Pindah Task (Drag & Drop)
   const moveTask = async (taskId, targetColumnId) => {
+    // Optimistic UI: langsung ubah kolom task di state lokal
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, column_id: targetColumnId } : t))
     );
@@ -162,7 +206,7 @@ export const useBoard = () => {
     }
   };
 
-  // 6. Tambah Task Baru
+  // 8. Tambah Task Baru
   const addTask = async (columnId, title, priority = 'Medium') => {
     if (!currentProject) return;
     try {
@@ -186,10 +230,11 @@ export const useBoard = () => {
       }
     } catch (err) {
       console.error('Error adding task:', err.message);
+      throw err;
     }
   };
 
-  // 7. Hapus Task
+  // 9. Hapus Task
   const deleteTask = async (taskId) => {
     const previousTasks = [...tasks];
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -199,7 +244,8 @@ export const useBoard = () => {
       if (error) throw error;
     } catch (err) {
       console.error('Error deleting task:', err.message);
-      setTasks(previousTasks);
+      setTasks(previousTasks); // Rollback jika query gagal
+      throw err;
     }
   };
 
@@ -210,8 +256,12 @@ export const useBoard = () => {
     columns,
     tasks,
     loading,
+    fetchProjects,
+    fetchBoard,
     createProject,
     joinProject,
+    leaveProject,
+    deleteProject,
     moveTask,
     addTask,
     deleteTask,

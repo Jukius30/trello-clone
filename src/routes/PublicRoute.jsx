@@ -1,17 +1,24 @@
-import { Navigate, Outlet } from 'react-router-dom';
+// src/routes/PublicRoute.jsx
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function PublicRoute() {
+export default function PublicRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
-        Memuat sesi...
+      <div className="vh-100 bg-black text-light d-flex align-items-center justify-content-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
       </div>
     );
   }
 
-  // Jika sudah login, lempar langsung ke board/dashboard
-  return !user ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  // Jika sudah login, langsung lempar ke dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 }

@@ -1,5 +1,6 @@
 // src/pages/BoardPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // <-- Pastikan useEffect ada di sini
+import { useParams, useNavigate } from 'react-router-dom'; // <-- Pastikan useParams & useNavigate ada di sini
 import { useAuth } from '../context/AuthContext';
 import { useBoard } from '../hooks/useBoard';
 import Navbar from '../components/Navbar';
@@ -23,21 +24,21 @@ export default function BoardPage() {
     deleteTask,
   } = useBoard();
 
-  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectName, setNewProjectName] = useState("");
   const [showProjectModal, setShowProjectModal] = useState(false);
 
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinProjectId, setJoinProjectId] = useState('');
-  const [joinError, setJoinError] = useState('');
+  const [joinProjectId, setJoinProjectId] = useState("");
+  const [joinError, setJoinError] = useState("");
 
   const [activeColumnInput, setActiveColumnInput] = useState(null);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState('Medium');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState("Medium");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Drag and Drop Handler
   const handleDragStart = (e, taskId) => {
-    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.setData("text/plain", taskId);
   };
 
   const handleDragOver = (e) => {
@@ -46,7 +47,7 @@ export default function BoardPage() {
 
   const handleDrop = (e, targetColumnId) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain');
+    const taskId = e.dataTransfer.getData("text/plain");
     if (taskId) {
       moveTask(taskId, targetColumnId);
     }
@@ -57,19 +58,19 @@ export default function BoardPage() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
     await createProject(newProjectName);
-    setNewProjectName('');
+    setNewProjectName("");
     setShowProjectModal(false);
   };
 
   // Join Project
   const handleJoinProject = async (e) => {
     e.preventDefault();
-    setJoinError('');
+    setJoinError("");
     if (!joinProjectId.trim()) return;
 
     try {
       await joinProject(joinProjectId.trim());
-      setJoinProjectId('');
+      setJoinProjectId("");
       setShowJoinModal(false);
     } catch (err) {
       setJoinError(err.message);
@@ -80,21 +81,34 @@ export default function BoardPage() {
   const handleCreateTask = async (columnId) => {
     if (!newTaskTitle.trim()) return;
     await addTask(columnId, newTaskTitle, newTaskPriority);
-    setNewTaskTitle('');
-    setNewTaskPriority('Medium');
+    setNewTaskTitle("");
+    setNewTaskPriority("Medium");
     setActiveColumnInput(null);
   };
 
   // Filter Task
   const filteredTasks = tasks.filter((t) =>
-    t.title.toLowerCase().includes(searchQuery.toLowerCase())
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const getPriorityBadge = (priority) => {
-    if (priority === 'High') return 'bg-danger text-white';
-    if (priority === 'Medium') return 'bg-warning text-dark';
-    return 'bg-success text-white';
+    if (priority === "High") return "bg-danger text-white";
+    if (priority === "Medium") return "bg-warning text-dark";
+    return "bg-success text-white";
   };
+
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+
+  // Sinkronkan project aktif sesuai parameter URL
+  useEffect(() => {
+    if (projectId && projects.length > 0) {
+      const match = projects.find((p) => p.id === projectId);
+      if (match) {
+        setCurrentProject(match);
+      }
+    }
+  }, [projectId, projects]);
 
   return (
     <div className="d-flex flex-column vh-100 bg-black text-light overflow-hidden">
@@ -105,7 +119,7 @@ export default function BoardPage() {
         onSelectProject={setCurrentProject}
         onOpenNewProject={() => setShowProjectModal(true)}
         onOpenJoinProject={() => {
-          setJoinError('');
+          setJoinError("");
           setShowJoinModal(true);
         }}
         onLeaveProject={leaveProject}
@@ -120,15 +134,22 @@ export default function BoardPage() {
       <main className="flex-grow-1 p-3 bg-dark bg-opacity-75 overflow-hidden">
         {loading ? (
           <div className="h-100 d-flex align-items-center justify-content-center text-secondary">
-            <div className="spinner-border spinner-border-sm me-2 text-primary" role="status"></div>
+            <div
+              className="spinner-border spinner-border-sm me-2 text-primary"
+              role="status"
+            ></div>
             <span>Memuat data board...</span>
           </div>
         ) : !currentProject ? (
           <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center">
-            <div className="card bg-dark border-secondary p-4 shadow" style={{ maxWidth: '380px' }}>
+            <div
+              className="card bg-dark border-secondary p-4 shadow"
+              style={{ maxWidth: "380px" }}
+            >
               <h5 className="card-title text-white">Belum Ada Project</h5>
               <p className="card-text text-secondary small">
-                Buat workspace baru atau bergabung ke workspace teman menggunakan kode project.
+                Buat workspace baru atau bergabung ke workspace teman
+                menggunakan kode project.
               </p>
               <div className="d-flex justify-content-center gap-2">
                 <button
@@ -141,7 +162,7 @@ export default function BoardPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setJoinError('');
+                    setJoinError("");
                     setShowJoinModal(true);
                   }}
                   className="btn btn-outline-info btn-sm"
@@ -155,7 +176,9 @@ export default function BoardPage() {
           /* Container Bootstrap Row yang memenuhi 100% lebar dan tinggi layar */
           <div className="row h-100 g-3 align-items-stretch m-0">
             {columns.map((col) => {
-              const colTasks = filteredTasks.filter((t) => t.column_id === col.id);
+              const colTasks = filteredTasks.filter(
+                (t) => t.column_id === col.id,
+              );
 
               return (
                 /* Setiap kolom mengambil bagian yang sama (col / flex-fill) */
@@ -167,8 +190,12 @@ export default function BoardPage() {
                   >
                     {/* Header Kolom */}
                     <div className="card-header bg-dark border-secondary d-flex justify-content-between align-items-center py-2 px-3">
-                      <span className="fw-semibold text-light small">{col.title}</span>
-                      <span className="badge bg-secondary rounded-pill">{colTasks.length}</span>
+                      <span className="fw-semibold text-light small">
+                        {col.title}
+                      </span>
+                      <span className="badge bg-secondary rounded-pill">
+                        {colTasks.length}
+                      </span>
                     </div>
 
                     {/* Task List (Memanjang Penuh & Scroll Vertikal) */}
@@ -187,10 +214,12 @@ export default function BoardPage() {
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             className="card bg-black border-secondary p-2 shadow-sm text-start"
-                            style={{ cursor: 'grab' }}
+                            style={{ cursor: "grab" }}
                           >
                             <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-                              <p className="card-text text-light small mb-0 pe-2">{task.title}</p>
+                              <p className="card-text text-light small mb-0 pe-2">
+                                {task.title}
+                              </p>
                               <div className="d-flex align-items-center gap-1">
                                 <button
                                   type="button"
@@ -200,7 +229,7 @@ export default function BoardPage() {
                                   }}
                                   className="btn btn-link text-secondary text-hover-danger p-0 border-0"
                                   title="Hapus Task"
-                                  style={{ fontSize: '13px', lineHeight: 1 }}
+                                  style={{ fontSize: "13px", lineHeight: 1 }}
                                 >
                                   <i className="bi bi-trash3"></i>
                                 </button>
@@ -211,7 +240,7 @@ export default function BoardPage() {
                             <div>
                               <span
                                 className={`badge ${getPriorityBadge(task.priority)}`}
-                                style={{ fontSize: '10px' }}
+                                style={{ fontSize: "10px" }}
                               >
                                 {task.priority}
                               </span>
@@ -236,9 +265,15 @@ export default function BoardPage() {
                           <div className="d-flex justify-content-between align-items-center">
                             <select
                               value={newTaskPriority}
-                              onChange={(e) => setNewTaskPriority(e.target.value)}
+                              onChange={(e) =>
+                                setNewTaskPriority(e.target.value)
+                              }
                               className="form-select form-select-sm bg-black border-secondary text-white py-0 px-2"
-                              style={{ width: '90px', height: '28px', fontSize: '12px' }}
+                              style={{
+                                width: "90px",
+                                height: "28px",
+                                fontSize: "12px",
+                              }}
                             >
                               <option value="Low">Low</option>
                               <option value="Medium">Medium</option>
@@ -249,10 +284,10 @@ export default function BoardPage() {
                                 type="button"
                                 onClick={() => {
                                   setActiveColumnInput(null);
-                                  setNewTaskTitle('');
+                                  setNewTaskTitle("");
                                 }}
                                 className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                style={{ height: '28px' }}
+                                style={{ height: "28px" }}
                               >
                                 Batal
                               </button>
@@ -260,7 +295,7 @@ export default function BoardPage() {
                                 type="button"
                                 onClick={() => handleCreateTask(col.id)}
                                 className="btn btn-primary btn-sm py-0 px-2"
-                                style={{ height: '28px' }}
+                                style={{ height: "28px" }}
                               >
                                 Tambah
                               </button>
@@ -272,7 +307,7 @@ export default function BoardPage() {
                           type="button"
                           onClick={() => {
                             setActiveColumnInput(col.id);
-                            setNewTaskTitle('');
+                            setNewTaskTitle("");
                           }}
                           className="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1"
                         >
@@ -289,7 +324,10 @@ export default function BoardPage() {
       </main>
 
       {/* Footer Bawah */}
-      <Footer totalTasks={tasks.length} currentProjectTitle={currentProject?.title} />
+      <Footer
+        totalTasks={tasks.length}
+        currentProjectTitle={currentProject?.title}
+      />
 
       {/* Modal Buat Project Baru */}
       {showProjectModal && (
@@ -306,7 +344,9 @@ export default function BoardPage() {
               </div>
               <form onSubmit={handleCreateProject}>
                 <div className="modal-body">
-                  <label className="form-label small text-secondary">Nama Project</label>
+                  <label className="form-label small text-secondary">
+                    Nama Project
+                  </label>
                   <input
                     type="text"
                     placeholder="Contoh: Mobile App"
@@ -346,21 +386,27 @@ export default function BoardPage() {
                   className="btn-close btn-close-white"
                   onClick={() => {
                     setShowJoinModal(false);
-                    setJoinError('');
+                    setJoinError("");
                   }}
                 ></button>
               </div>
               <form onSubmit={handleJoinProject}>
                 <div className="modal-body">
                   {joinError && (
-                    <div className="alert alert-danger py-1 px-2 small mb-2">{joinError}</div>
+                    <div className="alert alert-danger py-1 px-2 small mb-2">
+                      {joinError}
+                    </div>
                   )}
-                  <label className="form-label small text-secondary">Kode Project (6 Karakter)</label>
+                  <label className="form-label small text-secondary">
+                    Kode Project (6 Karakter)
+                  </label>
                   <input
                     type="text"
                     placeholder="Contoh: 7K9M2X"
                     value={joinProjectId}
-                    onChange={(e) => setJoinProjectId(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setJoinProjectId(e.target.value.toUpperCase())
+                    }
                     maxLength={6}
                     className="form-control form-control-sm bg-black border-secondary text-white font-monospace text-center fs-6 tracking-wider"
                     autoFocus
@@ -371,13 +417,16 @@ export default function BoardPage() {
                     type="button"
                     onClick={() => {
                       setShowJoinModal(false);
-                      setJoinError('');
+                      setJoinError("");
                     }}
                     className="btn btn-secondary btn-sm"
                   >
                     Batal
                   </button>
-                  <button type="submit" className="btn btn-info btn-sm text-dark fw-semibold">
+                  <button
+                    type="submit"
+                    className="btn btn-info btn-sm text-dark fw-semibold"
+                  >
                     Gabung
                   </button>
                 </div>
